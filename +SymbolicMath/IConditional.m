@@ -1,5 +1,5 @@
 classdef IConditional
-	properties(Abstract,SetAccess=protected)
+	properties(Abstract,SetAccess=immutable)
 		Equations
 	end
 end

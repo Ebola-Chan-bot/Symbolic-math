@@ -7,8 +7,6 @@ classdef IsoscelesRightTriangle<SymbolicMath.IDimensional&SymbolicMath.IConditio
 	end
 	properties(Dependent,SetAccess=immutable)
 		NumDimensions
-	end
-	properties(Dependent,SetAccess=protected)
 		Equations
 	end
 	properties(Dependent)
@@ -47,16 +45,16 @@ classdef IsoscelesRightTriangle<SymbolicMath.IDimensional&SymbolicMath.IConditio
 			obj.ParietalAngle=SymbolicMath.Point(ParietalAngle);
 		end
 		function Waist=get.WaistA(obj)
-			Waist=obj.BaseAngleA-obj.ParietalAngle;
+			Waist=SymbolicMath.FixedVector(obj.ParietalAngle,obj.BaseAngleA);
 		end
 		function Waist=get.WaistB(obj)
-			Waist=obj.BaseAngleB-obj.ParietalAngle;
+			Waist=SymbolicMath.FixedVector(obj.ParietalAngle,obj.BaseAngleB);
 		end
 		function ND=get.NumDimensions(obj)
 			ND=obj.ParietalAngle.NumDimensions;
 		end
 		function Eqs=get.Equations(obj)
-			Eqs=[obj.WaistA.SqAbs==obj.WaistA.SqAbs;Perpendicular(obj.WaistA,obj.WaistB)];
+			Eqs=[obj.WaistA.SquareLength==obj.WaistA.SquareLength;SymbolicMath.Perpendicular(obj.WaistA,obj.WaistB)];
 		end
 	end
 end
