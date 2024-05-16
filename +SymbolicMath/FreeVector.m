@@ -46,28 +46,26 @@ classdef FreeVector<SymbolicMath.Point&SymbolicMath.ILength
 			% Vector(1,1)，可以是FreeVector或FixedVector，用于创建相同的新对象
 			% Coordinate(1,:)，向量的各维坐标，可以是sym或数值类型
 			% ABString(1,2)char，以二字符串的形式指定起点和终点名称。这要求起点和终点都具有单字符名称。
-			% StartPoint,EndPoint(1,1)，分别指定起点和终点。
-			% - 如果指定为Point，则将以指定的Point作为起点和终点
-			% - 如果指定为string，则将以指定的字符串作为起点和终点的名称
+			% StartPoint,EndPoint，分别指定起点和终点。
+			% - 如果指定为(1,1)Point，则将以指定的Point作为起点或终点
+			% - 如果指定为(1,1)string，则将以指定的字符串作为起点或终点的名称
+			% - 如果指定为sym或数值类型，则将以指定的坐标作为起点或终点
 			%# 返回值
 			% obj(1,1)FreeVector，新建的向量
 			%# 特别提示
 			% 点名称不是点变量名。如果要使用没有名称的点，则不能使用点名称相关的语法构造。如果使用起点和终点创建，此对象仅记录起点和终点的相对位置关系，不记录点的具体
-			%  位置。如需通过对象找回起点和终点，必须使用FixedVector。
+			%  位置。如需通过对象找回起点和终点，必须使用FixedVector。如果所有点都使用名称指定，这些点都将被视为二维的。
 			if ~isa(obj,'SymbolicMath.FreeVector')
-				if isa(obj,'sym')||isnumeric(obj)
-					obj=SymbolicMath.FreeVector(obj);
-				else
-					if isa(obj,'SymbolicMath.FixedVector')
-						EndPoint=obj.EndPoint;
-						obj=obj.StartPoint;
-					elseif nargin==1
-						obj=char(obj);
-						EndPoint=obj(2);
-						obj=obj(1);
-					end
-					obj=SymbolicMath.FreeVector(SymbolicMath.Point(EndPoint).Coordinate-SymbolicMath.Point(obj).Coordinate);
+				if nargin==1&&(ischar(obj)||isstring(obj))
+					obj=char(obj);
+					EndPoint=obj(2);
+					obj=obj(1);
 				end
+				if ischar(obj)||isstring(obj)||isa(obj,'SymbolicMath.Point')
+					[obj,EndPoint]=GetPointCoordinate(obj,EndPoint);
+					obj=EndPoint-obj;
+				end
+				obj=SymbolicMath.FreeVector(obj);
 			end
 		end
 	end
