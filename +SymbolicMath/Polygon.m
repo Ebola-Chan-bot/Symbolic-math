@@ -1,16 +1,27 @@
 classdef Polygon
-	%POLYGON 此处显示有关此类的摘要
-	%   此处显示详细说明
-
+	%表示一个多边形
 	properties
-		Property1
-	end
+		%变量名
+		VariableNames
 
+		%共面约束多项式张量
+		PolynomialTensors
+	end
 	methods
-		function obj = Polygon(inputArg1,inputArg2)
-			%POLYGON 构造此类的实例
-			%   此处显示详细说明
-			obj.Property1 = inputArg1 + inputArg2;
+		function obj = Polygon(NumDimensions,Points)
+			%输入空间维度
+			switch nargin
+				case 1
+					Points=NumDimensions;
+					NumDimensions=unique([Points.NumDimensions]);
+					SymbolicMath.Exception.Different_vertex_dimensions.Assert(isscalar(NumDimensions));
+				case 2
+					if~isa(Points,'SymbolicMath.Point')
+						Points=SymbolicMath.Point.Points(NumDimensions,Points);
+					end
+			end
+			[obj.VariableNames,iPermutes]=VariableIPermutes({Points.VariableNames});
+
 		end
 
 		function outputArg = method1(obj,inputArg)
