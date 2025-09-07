@@ -4,11 +4,14 @@ classdef Angle
 		%顶点坐标
 		Vertex(2,1)
 
-		%顺时针方向，两个边的倾角(-π,π]
-		Angles(1,2)
+		%从顶点指向角平分线的方向角(-π,π]
+		BisectorAngle(1,1)
+
+		%角度大小
+		Radian(1,1)
 	end
 	methods
-		function obj = Angle(Vertex,Angles)
+		function obj = Angle(Vertex,BisectorAngle,Radian)
 			switch nargin
 				case 1
 					if isa(Vertex,'SymbolicMath.Point')
@@ -17,22 +20,21 @@ classdef Angle
 						Vertex=sym(arrayfun(@string,Vertex)+["1";"2"],'real');
 					end
 					obj.Vertex=Vertex(:,2);
-					Angles=Vertex(:,[1,3])-obj.Vertex;
-					obj.Angles=atan2(Angles(2,:),Angles(1,:));
+					obj.BisectorAngle=atan2(mean(Vertex(:,[1,3]),2)-obj.Vertex);
+					obj.Radian=
 				case 2
-					if isa(Vertex,'SymbolicMath.Point')
-						obj.Vertex=Vertex.Coordinate;
-						Angles=[Angles.Coordinate]-Vertex.Coordinate;
-						obj.Angles=atan2(Angles(2,:),Angles(1,:));
-					else
-						obj.Vertex=Vertex;
-						obj.Angles=Angles;
-					end
+					obj.Vertex=Vertex.Coordinate;
+					obj.BisectorAngle=atan2(mean([BisectorAngle.Coordinate],2)-obj.Vertex);
+					obj.Radian=mod(atan2(BisectorAngle(1).Coordinate-obj.Vertex)-atan2(BisectorAngle(2).Coordinate-obj.Vertex),2*pi);
+				case 3
+					obj.Vertex=Vertex;
+					obj.BisectorAngle=BisectorAngle;
+					obj.Radian=Radian;
 			end
 		end
 		function SL=Bisector(obj)
-			Angle=mean(obj.Angles);
-			SL=SymbolicMath.StraightLine(Angle,obj.Vertex(1).*sin(Angle) - obj.Vertex(2).*cos(Angle));
+			Angle=mean(obj.Angles)+pi/2;
+			SL=SymbolicMath.StraightLine(Angle,obj.Vertex(1).*cos(Angle) + obj.Vertex(2).*sin(Angle));
 		end
 	end
 end

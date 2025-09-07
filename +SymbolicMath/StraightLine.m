@@ -1,10 +1,11 @@
 classdef StraightLine
+	%通过从原点垂直指向直线的法向量确定一条直线
 	properties
-		%倾角
+		%法向量的倾角（不是直线的倾角），(-π,π]
 		Angle(1,1)
-		
+
 		%到原点的有向距离
-		%直线上任一点(X,Y)满足X.*sin(Angle)-Y.*cos(Angle)==DirectionalOriginDistance
+		%直线上任一点(X,Y)满足X.*cos(Angle)+Y.*sin(Angle)==DirectionalOriginDistance
 		DirectionalOriginDistance(1,1)
 	end
 	methods
@@ -18,14 +19,8 @@ classdef StraightLine
 				S=SymbolicMath.Point(S);
 			end
 			if isa(S,'SymbolicMath.Point')
-				sinA = sin(obj.Angle); 
-				cosA = cos(obj.Angle);
-				x0 = S.Coordinate(1);
-				y0 = S.Coordinate(2);
-				% 有向距离差
-				h = (x0*sinA - y0*cosA - obj.DirectionalOriginDistance)*2;
-				% 反射: P' = P - 2*h*n, n=(sinA,-cosA)
-				S = SymbolicMath.Point([x0 - h.*sinA; y0 + h.*cosA]);
+				UnitNormalVector = [cos(obj.Angle); sin(obj.Angle)];
+				S = SymbolicMath.Point(S.Coordinate+2*(obj.DirectionalOriginDistance-dot(UnitNormalVector,S.Coordinate))*UnitNormalVector);
 			end
 		end
 	end
