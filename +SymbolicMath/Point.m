@@ -1,22 +1,22 @@
 classdef Point
+	%POINT undefined
+	%   undefined
+	
 	properties
-		%XY坐标
-		Coordinate(2,1)
+		Property1
 	end
-
+	
 	methods
-		function obj = Point(Coordinate)
-			if isscalar(Coordinate)
-				obj.Coordinate=sym(Coordinate+["1";"2"],'real');
-			else
-				obj.Coordinate=Coordinate;
-			end
+		function obj = Point(inputArg1,inputArg2)
+			%POINT undefined
+			%   undefined
+			obj.Property1 = inputArg1 + inputArg2;
 		end
-		function Vector=minus(objA,objB)
-			Vector=objA.Coordinate-objB.Coordinate;
-		end
-		function disp(obj)
-			disp(obj.Coordinate);
+		
+		function outputArg = method1(obj,inputArg)
+			%METHOD1 undefined
+			%   undefined
+			outputArg = obj.Property1 + inputArg;
 		end
 	end
 end
