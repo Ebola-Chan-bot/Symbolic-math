@@ -5,7 +5,6 @@ classdef Fractional<SymbolicMath.Vectorizable
 	end
 	methods(Static,Access=protected)
 		function obj = Fractional_(Numerator, Denominator)
-			obj=SymbolicMath.Fractional;
 			if nargin<2
 				if isa(Numerator,'sym')
 					[obj.Numerator,obj.Denominator]=numden(Numerator);

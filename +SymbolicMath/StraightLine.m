@@ -1,26 +1,35 @@
-classdef StraightLine
-	%通过从原点垂直指向直线的法向量确定一条直线
+classdef StraightLine<handle
+	%通过直线倾角和到原点的有向距离确定一条直线
+	properties(SetAccess=immutable)
+		%已知直线是该角的平分线。可能为空。
+		BisectorOf
+	end
 	properties
-		%法向量的倾角（不是直线的倾角），(-π,π]
-		Angle(1,1)
-
-		%到原点的有向距离
-		%直线上任一点(X,Y)满足X.*cos(Angle)+Y.*sin(Angle)==DirectionalOriginDistance
-		DirectionalOriginDistance(1,1)
+		%直线上的已知点坐标，至少有1个
+		KnownPoints(2,:)
 	end
 	methods
-		function obj = StraightLine(Angle,DirectionalOriginDistance)
-			obj.Angle = Angle;
-			obj.DirectionalOriginDistance = DirectionalOriginDistance;
-		end
-		function S=Symmetry(obj,S)
-			%以本直线为对称轴，求图形对象的对称对象
-			if ischar(S)
-				S=SymbolicMath.Point(S);
+		function obj = StraightLine(AorP)
+			%# 语法
+			% ```
+			% obj=SymbolicMath.StraightLine(Angle);
+			% %取得角的平分线
+			%
+			% obj=SymbolicMath.StraightLine(KnownPoints);
+			% %通过已知点构造一条直线
+			% ```
+			%# 输入参数
+			% Angle(1,1)SymbolicMath.Angle，作为其平分线的角
+			% KnownPoints(1,2)string，直线上已知的两个点名称
+			arguments
+				AorP(1,:)
 			end
-			if isa(S,'SymbolicMath.Point')
-				UnitNormalVector = [cos(obj.Angle); sin(obj.Angle)];
-				S = SymbolicMath.Point(S.Coordinate+2*(obj.DirectionalOriginDistance-dot(UnitNormalVector,S.Coordinate))*UnitNormalVector);
+			switch numel(AorP)
+				case 1
+					obj.BisectorOf=AorP;
+					obj.KnownPoints=AorP.Vertex;
+				case 2
+					obj.KnownPoints=SymbolicMath.TensorPolynomial(AorP+["_X";"_Y"]);
 			end
 		end
 	end
