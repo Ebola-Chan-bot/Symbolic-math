@@ -1,7 +1,10 @@
 classdef TensorPolynomial<SymbolicMath.Vectorizable
 	%张量表示的多项式
 	properties(SetAccess=protected)
-		TermCoefficients
+		%每个维度一个变量，维度上的位置表示次数（从0开始）
+		Tensor
+		
+		VariableNames(1,:)
 	end
 	methods(Static,Access=protected)
 		function obj = TensorPolynomial_(Polynomial)
@@ -15,14 +18,20 @@ classdef TensorPolynomial<SymbolicMath.Vectorizable
 			Polynomial = expand(Polynomial); % 确保已展开
 			vars = symvar(Polynomial);      % 自动按符号名字典顺序 (MATLAB 规则) 获取变量
 			obj=SymbolicMath.TensorPolynomial;
-			obj.TermCoefficients=table;
+			obj.VariableNames=string(vars);
 			if isempty(vars)
-				obj.TermCoefficients.Coefficient=Polynomial;
+				obj.Tensor=Polynomial;
 				return;
 			end
-			[obj.TermCoefficients.Coefficient, monomials] = coeffs(Polynomial, vars); % coeffVec(k) * monomials(k)
-			exps=uint8(MATLAB.DataTypes.ArrayFun(@(M,V)SE.feval('degree',M,V),monomials,vars));
-			obj.TermCoefficients.Term=array2table(exps,VariableNames=string(vars));
+			[Coefficients, monomials] = coeffs(Polynomial, vars); % coeffVec(k) * monomials(k)
+			exps=uint8(MATLAB.DataTypes.ArrayFun(@(M,V)SE.feval('degree',M,V),monomials(:),vars))+1;
+			if isvector(exps)
+				exps(:,2)=1;
+			end
+			exps=num2cell(exps);
+			for T=1:height(exps)
+				obj.Tensor(exps{T,:})=Coefficients(T);
+			end
 		end
 	end
 	methods(Static)
@@ -89,25 +98,53 @@ classdef TensorPolynomial<SymbolicMath.Vectorizable
 			end
 		end
 		function S=sym_(obj)
-			if isempty(obj.TermCoefficients)
-				S=sym(0);
-			else
-				S=prod(sym(obj.TermCoefficients.Term.Properties.VariableNames).^obj.TermCoefficients.Term{:,:},2).'*obj.TermCoefficients.Coefficient;
+			Index=find(obj.Tensor);
+			Subs=cell(1,numel(obj.VariableNames));
+			if isempty(Subs)
+				S=obj.Tensor;
+				return;
 			end
+			[Subs{:}]=ind2sub(size(obj.Tensor),Index);
+			Subs=[Subs{:}]-1;
+			S=dot(prod(sym(obj.VariableNames,'real').^Subs,2),obj.Tensor(Index));
 		end
 		function obj=simplify_(obj)
-			obj.TermCoefficients=TcSimplify(obj.TermCoefficients);
-			obj.TermCoefficients.Term(:,~any(obj.TermCoefficients.Term{:,:},1))=[];
+			NumVariables=numel(obj.VariableNames);
+			Dimensions=1:NumVariables;
+			Subs=repmat({':'},1,NumVariables);
+			obj.Tensor(abs(obj.Tensor)<eps)=0;
+			for D=Dimensions
+				Subs{D}=find(any(obj.Tensor,[1:D-1,D+1:NumVariables]),1,'last')+1:size(obj.Tensor,D);
+				obj.Tensor(Subs{:})=[];
+				Subs{D}=':';
+			end
+			VariablesLeft=size(obj.Tensor,Dimensions)>1;
+			obj.VariableNames=obj.VariableNames(VariablesLeft);
+			if isempty(obj.VariableNames)
+				obj.Tensor=obj.Tensor(1);
+			else
+				VariablesLeft=size(obj.Tensor,find(VariablesLeft));
+				if isscalar(VariablesLeft)
+					VariablesLeft(2)=1;
+				end
+				obj.Tensor=reshape(obj.Tensor,VariablesLeft);
+			end
 		end
 	end
 	methods
-		function obj = TensorPolynomial(SymbolicValues)
-			if nargin
-				if isa(SymbolicValues,'SymbolicMath.TensorPolynomial')
-					obj=SymbolicValues;
-				else
-					obj = arrayfun(@SymbolicMath.TensorPolynomial.TensorPolynomial_,SymbolicValues);
-				end
+		function obj = TensorPolynomial(Tensor,VariableNames)
+			switch nargin
+				case 0
+					obj.Tensor=0;
+				case 1
+					if isa(Tensor,'SymbolicMath.TensorPolynomial')
+						obj=Tensor;
+					else
+						obj = arrayfun(@SymbolicMath.TensorPolynomial.TensorPolynomial_,Tensor);
+					end
+				case 2
+					obj.Tensor=Tensor;
+					obj.VariableNames=VariableNames;
 			end
 		end
 		function obj=plus(objA,objB)
@@ -145,6 +182,13 @@ classdef TensorPolynomial<SymbolicMath.Vectorizable
 			for O=1:numel(obj)
 				obj(O).Tensor=ifftn(sqrt(fftn(obj(O).Tensor)));
 			end
+		end
+		function varargout=quorem(Numerator,Denominator)
+			arguments
+				Numerator SymbolicMath.TensorPolynomial
+				Denominator SymbolicMath.TensorPolynomial
+			end
+			[varargout{1:nargout}]=MATLAB.DataTypes.ArrayFun(@quorem_,Numerator,Denominator);
 		end
 	end
 end
@@ -230,5 +274,42 @@ while true
 		break;
 	end
 	TCB.Term=TCB.Term(:,Logical);
+end
+end
+function [VariableNames,TensorA,TensorB]=UnionVariables(objA,objB)
+[VariableNames,TensorA,TensorB]=MATLAB.Ops.UnionN(2,objA.VariableNames,objB.VariableNames);
+IPermuter=1:max([numel(objA.VariableNames),numel(objB.VariableNames),2]);
+TensorA=ipermute(objA.Tensor,[TensorA,setdiff(IPermuter,TensorA)]);
+TensorB=ipermute(objB.Tensor,[TensorB,setdiff(IPermuter,TensorB)]);
+end
+function [Quotient,Remainder]=quorem_(Numerator,Denominator)
+[VariableNames,Numerator,Denominator]=UnionVariables(Numerator,Denominator);
+Dimensions=1:numel(VariableNames);
+SizeN=size(Numerator,Dimensions);
+SizeD=size(Denominator,Dimensions);
+MaxSize=max(SizeN,SizeD);
+SizeQ=MaxSize-SizeD+1;
+NumElements=prod(MaxSize);
+MaxSize=num2cell(MaxSize);
+if numel(Numerator)<NumElements
+	Numerator(MaxSize{:})=0;
+end
+if numel(Denominator)<NumElements
+	Denominator(MaxSize{:})=0;
+end
+Numerator=fftn(Numerator);
+Denominator=fftn(Denominator);
+TensorQ=ifftn(fillmissing(Numerator./Denominator,'constant',0));
+SubsQ=arrayfun(@(S)1:S,SizeQ,UniformOutput=false);
+TensorQ(SubsQ{:})=0;
+
+TensorQ=TensorQ(SubsQ{:});
+Quotient=SymbolicMath.TensorPolynomial(TensorQ,VariableNames);
+Quotient=Quotient.simplify_;
+if nargout>1
+	TensorQ(MaxSize{:})=0;
+	Remainder=ifftn(Numerator-Denominator.*fftn(TensorQ));
+	Remainder=SymbolicMath.TensorPolynomial(Remainder,VariableNames);
+	Remainder=Remainder.simplify_;
 end
 end
